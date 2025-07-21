@@ -8,11 +8,18 @@ Cargo.lock
 .vscode/
 *.swp
 *.swo
+.claude
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Nix
+
+.direnv
+result
+
 # Whispy specific
 *.wav
 /tmp/
+
