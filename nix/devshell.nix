@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, whisper-cpp, ... }:
 
 pkgs.mkShell {
   name = "chezwizper-dev";
@@ -17,8 +17,6 @@ pkgs.mkShell {
     libxkbcommon
 
     # Runtime dependencies
-    whisper-cpp
-    openai-whisper
     wtype
     ydotool
     wl-clipboard
@@ -36,7 +34,7 @@ pkgs.mkShell {
     jq
     ripgrep
     fd
-  ];
+  ] ++ [ whisper-cpp ];
 
   shellHook = ''
     echo "ChezWizper Development Environment"
@@ -51,7 +49,7 @@ pkgs.mkShell {
     echo "  cargo watch -x run   - Run with auto-reload"
     echo ""
     echo "Whisper:"
-    echo "  whisper-cpp and OpenAI whisper are available in PATH"
+    echo "  whisper-cpp is available in PATH as 'whisper'"
     echo "  Download models with: ./nix/download-models.sh"
     echo ""
     echo "Configuration:"

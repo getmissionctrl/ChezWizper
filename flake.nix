@@ -13,18 +13,26 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           
-          # Override whisper-cpp to disable CUDA support to avoid segfaults
-          whisper-cpp-no-cuda = pkgs.whisper-cpp.override {
-            cudaSupport = false;
-          };
+          # Updated whisper-cpp with specific commit to fix nixpkgs issues
+          whisperUpdated = pkgs.whisper-cpp.overrideAttrs (oldAttrs: {
+            src = pkgs.fetchFromGitHub {
+              owner = "ggml-org";
+              repo = "whisper.cpp";
+              rev = "a8d002cfd879315632a579e73f0148d06959de36";
+              sha256 = "sha256-dppBhiCS4C3ELw/Ckx5W0KOMUvOHUiisdZvkS7gkxj4=";
+            };
+          });
           
-          # Import our package definition with custom whisper-cpp
+          # Import our package definition with updated whisper-cpp
           chezwizper = pkgs.callPackage ./nix/package.nix { 
-            whisper-cpp = whisper-cpp-no-cuda;
+            whisper-cpp = whisperUpdated;
           };
           
-          # Import our devshell
-          devShell = import ./nix/devshell.nix { inherit pkgs; };
+          # Import our devshell with updated whisper-cpp
+          devShell = import ./nix/devshell.nix { 
+            inherit pkgs; 
+            whisper-cpp = whisperUpdated;
+          };
         in
         {
           # The main package
@@ -54,10 +62,18 @@
 
         # Overlay for easy integration
         overlays.default = final: prev: {
-          chezwizper = final.callPackage ./nix/package.nix { 
-            whisper-cpp = final.whisper-cpp.override {
-              cudaSupport = false;
+          # Updated whisper-cpp with specific commit to fix nixpkgs issues
+          whisper-cpp = prev.whisper-cpp.overrideAttrs (oldAttrs: {
+            src = final.fetchFromGitHub {
+              owner = "ggml-org";
+              repo = "whisper.cpp";
+              rev = "a8d002cfd879315632a579e73f0148d06959de36";
+              sha256 = "sha256-dppBhiCS4C3ELw/Ckx5W0KOMUvOHUiisdZvkS7gkxj4=";
             };
+          });
+          
+          chezwizper = final.callPackage ./nix/package.nix { 
+            whisper-cpp = final.whisper-cpp;
           };
         };
       };
