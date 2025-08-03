@@ -36,6 +36,121 @@ For other distributions or custom setups, see the [Installation Guide](./docs/in
 
 Default config at `~/.config/chezwizper/config.toml`. See [Configuration Guide](./docs/audio-configuration.md) for details.
 
+## Nix Installation
+
+ChezWizper is available as a Nix flake with NixOS and Home Manager modules.
+
+### Using as a Flake Input
+
+Add ChezWizper to your system flake:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    chezwizper.url = "github:silvabyte/ChezWizper";
+  };
+
+  outputs = { self, nixpkgs, chezwizper, ... }: {
+    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        chezwizper.nixosModules.default
+        {
+          services.chezwizper = {
+            enable = true;
+            whisper.model = "base";  # or tiny, small, medium, large
+            hyprland = {
+              enable = true;
+              keybind = "SUPER, W";  # or "CTRL SHIFT, R"
+            };
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+### Home Manager Module
+
+For Home Manager users:
+
+```nix
+{
+  inputs = {
+    home-manager.url = "github:nix-community/home-manager";
+    chezwizper.url = "github:silvabyte/ChezWizper";
+  };
+
+  outputs = { self, nixpkgs, home-manager, chezwizper, ... }: {
+    homeConfigurations.yourusername = home-manager.lib.homeManagerConfiguration {
+      modules = [
+        chezwizper.homeManagerModules.default
+        {
+          services.chezwizper = {
+            enable = true;
+            whisper.model = "base";
+            hyprland.keybind = "SUPER, W";
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+### Configuration Options
+
+Key configuration options:
+
+```nix
+services.chezwizper = {
+  enable = true;
+  
+  # Whisper model configuration
+  whisper = {
+    model = "base";     # tiny, base, small, medium, large-v1/v2/v3
+    language = "en";    # Language code
+  };
+  
+  # Hyprland integration
+  hyprland = {
+    enable = true;
+    keybind = "SUPER, W";  # Your preferred keybind
+  };
+  
+  # Audio settings
+  audio = {
+    device = "default";
+    sampleRate = 16000;
+  };
+  
+  # UI preferences
+  ui = {
+    showNotifications = true;
+    indicatorPosition = "top-right";
+  };
+};
+```
+
+The module will automatically:
+- Download the specified Whisper model on first use
+- Configure the systemd service
+- Set up Hyprland keybinds (if enabled)
+- Create the configuration file
+
+### Building Locally
+
+```bash
+# Build the package
+nix build .#chezwizper
+
+# Run directly
+nix run .#chezwizper
+```
+
 ## Development
 
 ChezWizper uses a Makefile for common tasks:

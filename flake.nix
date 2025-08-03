@@ -13,25 +13,23 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           
-          # Updated whisper-cpp with specific commit to fix nixpkgs issues
-          whisperUpdated = pkgs.whisper-cpp.overrideAttrs (oldAttrs: {
-            src = pkgs.fetchFromGitHub {
-              owner = "ggml-org";
-              repo = "whisper.cpp";
-              rev = "a8d002cfd879315632a579e73f0148d06959de36";
-              sha256 = "sha256-dppBhiCS4C3ELw/Ckx5W0KOMUvOHUiisdZvkS7gkxj4=";
-            };
-          });
+          # Import our package definition with standard whisper-cpp
+          chezwizper = pkgs.callPackage ./nix/package.nix { };
           
-          # Import our package definition with updated whisper-cpp
-          chezwizper = pkgs.callPackage ./nix/package.nix { 
-            whisper-cpp = whisperUpdated;
+          # Whisper models packages (optional)
+          whisper-models-base = pkgs.callPackage ./nix/whisper-models.nix { 
+            models = [ "base" ];
+          };
+          whisper-models-small = pkgs.callPackage ./nix/whisper-models.nix { 
+            models = [ "base" "small" ];
+          };
+          whisper-models-large = pkgs.callPackage ./nix/whisper-models.nix { 
+            models = [ "base" "small" "large-v3" ];
           };
           
-          # Import our devshell with updated whisper-cpp
+          # Import our devshell
           devShell = import ./nix/devshell.nix { 
-            inherit pkgs; 
-            whisper-cpp = whisperUpdated;
+            inherit pkgs;
           };
         in
         {
@@ -39,6 +37,11 @@
           packages = {
             default = chezwizper;
             chezwizper = chezwizper;
+            
+            # Whisper models packages
+            whisper-models-base = whisper-models-base;
+            whisper-models-small = whisper-models-small;
+            whisper-models-large = whisper-models-large;
           };
 
           # Development shell
@@ -60,21 +63,15 @@
           chezwizper = ./nix/module.nix;
         };
 
+        # Home Manager module
+        homeManagerModules = {
+          default = ./nix/home-module.nix;
+          chezwizper = ./nix/home-module.nix;
+        };
+
         # Overlay for easy integration
         overlays.default = final: prev: {
-          # Updated whisper-cpp with specific commit to fix nixpkgs issues
-          whisper-cpp = prev.whisper-cpp.overrideAttrs (oldAttrs: {
-            src = final.fetchFromGitHub {
-              owner = "ggml-org";
-              repo = "whisper.cpp";
-              rev = "a8d002cfd879315632a579e73f0148d06959de36";
-              sha256 = "sha256-dppBhiCS4C3ELw/Ckx5W0KOMUvOHUiisdZvkS7gkxj4=";
-            };
-          });
-          
-          chezwizper = final.callPackage ./nix/package.nix { 
-            whisper-cpp = final.whisper-cpp;
-          };
+          chezwizper = final.callPackage ./nix/package.nix { };
         };
       };
     in

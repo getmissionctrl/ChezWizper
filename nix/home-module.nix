@@ -11,7 +11,7 @@ let
     if cfg.whisper.modelPath != null then 
       cfg.whisper.modelPath
     else 
-      "/var/lib/chezwizper/models/${modelFileName}";
+      "${config.xdg.dataHome}/chezwizper/models/${modelFileName}";
   
   configFile = pkgs.writeText "chezwizper-config.toml" ''
     [audio]
@@ -100,17 +100,11 @@ in
         description = "Language code for transcription";
       };
 
-      commandPath = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Custom path to whisper CLI (uses whisper-cpp from package if null)";
-      };
-
       modelPath = mkOption {
         type = types.nullOr types.path;
         default = null;
-        description = "Path to whisper model file (required for whisper.cpp)";
-        example = "/var/lib/chezwizper/models/ggml-base.bin";
+        description = "Path to whisper model file (auto-downloads if null)";
+        example = "~/.local/share/chezwizper/models/ggml-base.bin";
       };
     };
 
@@ -209,73 +203,94 @@ in
   };
 
   config = mkIf cfg.enable {
-    # Create system directories for models
-    systemd.tmpfiles.rules = [
-      "d /var/lib/chezwizper 0755 root root -"
-      "d /var/lib/chezwizper/models 0755 root root -"
-    ];
+    # Install the package
+    home.packages = [ chezwizperPackage ];
 
+    # Setup systemd user service
     systemd.user.services.chezwizper = {
-      description = "ChezWizper Voice Transcription Service";
-      documentation = [ "https://github.com/silvabyte/ChezWizper" ];
-      after = [ "graphical-session.target" ];
-      wantedBy = [ "default.target" ];
-
-      environment = {
-        RUST_LOG = cfg.logLevel;
-        XDG_CONFIG_HOME = "%h/.config";
+      Unit = {
+        Description = "ChezWizper Voice Transcription Service";
+        Documentation = [ "https://github.com/silvabyte/ChezWizper" ];
+        After = [ "graphical-session.target" ];
       };
 
-      serviceConfig = {
+      Service = {
         Type = "simple";
         ExecStart = "${chezwizperPackage}/bin/chezwizper";
         Restart = "always";
         RestartSec = 5;
+        Environment = [
+          "RUST_LOG=${cfg.logLevel}"
+        ];
 
-        # Security and resource limits
+        # Security settings
         PrivateTmp = true;
         ProtectSystem = "strict";
         ProtectHome = "read-only";
-        ReadWritePaths = [ 
-          "%h/.config/chezwizper" 
+        ReadWritePaths = [
+          "%h/.config/chezwizper"
+          "%h/.local/share/chezwizper"
           "%t"
-          "/var/lib/chezwizper"
         ];
-        
-        # Whisper models require significant memory
+
+        # Resource limits
         MemoryLimit = "6G";
         CPUQuota = "80%";
-
-        # Required for audio access
-        SupplementaryGroups = [ "audio" ];
       };
 
-      preStart = ''
-        # Create necessary directories
-        mkdir -p $HOME/.config/chezwizper
-        
-        # Copy configuration file
-        cp ${configFile} $HOME/.config/chezwizper/config.toml
-        
-        # Download model if it doesn't exist and no custom path is specified
-        ${optionalString (cfg.whisper.modelPath == null) ''
-          MODEL_FILE="/var/lib/chezwizper/models/${modelFileName}"
-          if [ ! -f "$MODEL_FILE" ]; then
-            echo "Downloading whisper model ${cfg.whisper.model}..."
-            cd /var/lib/chezwizper/models
-            ${cfg.whisper-cpp}/bin/whisper-cpp-download-ggml-model ${cfg.whisper.model}
-          fi
-        ''}
-      '';
+      Install = {
+        WantedBy = [ "default.target" ];
+      };
+    };
+
+    # Create config directories and download model
+    systemd.user.services.chezwizper-setup = {
+      Unit = {
+        Description = "ChezWizper initial setup";
+        Before = [ "chezwizper.service" ];
+      };
+
+      Service = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "chezwizper-setup" ''
+          # Create directories
+          mkdir -p $HOME/.config/chezwizper
+          mkdir -p ${config.xdg.dataHome}/chezwizper/models
+          
+          # Copy configuration
+          cp ${configFile} $HOME/.config/chezwizper/config.toml
+          
+          # Download model if needed
+          ${optionalString (cfg.whisper.modelPath == null) ''
+            MODEL_FILE="${config.xdg.dataHome}/chezwizper/models/${modelFileName}"
+            if [ ! -f "$MODEL_FILE" ]; then
+              echo "Downloading whisper model ${cfg.whisper.model}..."
+              cd ${config.xdg.dataHome}/chezwizper/models
+              ${cfg.whisper-cpp}/bin/whisper-cpp-download-ggml-model ${cfg.whisper.model}
+            fi
+          ''}
+        '';
+      };
+
+      Install = {
+        WantedBy = [ "chezwizper.service" ];
+      };
     };
 
     # Configure Hyprland keybind if enabled
-    # This would typically be done in the user's Hyprland configuration
-    # We'll provide an example configuration that users can include
-    environment.etc."chezwizper/hyprland-keybind.conf" = mkIf cfg.hyprland.enable {
+    wayland.windowManager.hyprland.settings = mkIf (cfg.hyprland.enable && config.wayland.windowManager.hyprland.enable or false) {
+      bind = [
+        "${cfg.hyprland.keybind}, exec, ${pkgs.curl}/bin/curl -X POST http://127.0.0.1:${toString cfg.port}/toggle"
+      ];
+    };
+
+    # Create a convenience script
+    home.file.".local/bin/chezwizper-toggle" = {
+      executable = true;
       text = ''
-        # Add this to your Hyprland configuration:
-        # bind = ${cfg.hyprland.keybind}, exec, ${pkgs.curl}/bin/curl -X POST http://127.0.0.1:${toString cfg.port}/toggle
+        #!/usr/bin/env bash
+        ${pkgs.curl}/bin/curl -X POST http://127.0.0.1:${toString cfg.port}/toggle
       '';
     };
   };
