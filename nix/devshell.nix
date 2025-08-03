@@ -1,4 +1,4 @@
-{ pkgs, whisper-cpp, ... }:
+{ pkgs, ... }:
 
 pkgs.mkShell {
   name = "chezwizper-dev";
@@ -17,14 +17,16 @@ pkgs.mkShell {
     libxkbcommon
 
     # Runtime dependencies
+    whisper-cpp
+    openai-whisper
     wtype
     ydotool
     wl-clipboard
     curl
     hyprland
+    alsa-utils  # Provides aplay, speaker-test for audio feedback
 
     # Development tools
-    pre-commit
     cargo-watch
     cargo-edit
     cargo-outdated
@@ -34,7 +36,7 @@ pkgs.mkShell {
     jq
     ripgrep
     fd
-  ] ++ [ whisper-cpp ];
+  ];
 
   shellHook = ''
     echo "ChezWizper Development Environment"
@@ -48,21 +50,20 @@ pkgs.mkShell {
     echo "  cargo fmt            - Format code"
     echo "  cargo watch -x run   - Run with auto-reload"
     echo ""
+    echo "Make commands (see Makefile):"
+    echo "  make build           - Build debug binary"
+    echo "  make release         - Build optimized release"
+    echo "  make test            - Run tests"
+    echo "  make lint            - Run clippy linter"
+    echo "  make fmt             - Check formatting"
+    echo "  make fix             - Fix formatting and simple issues"
+    echo ""
     echo "Whisper:"
-    echo "  whisper-cpp is available in PATH as 'whisper'"
-    echo "  Download models with: ./nix/download-models.sh"
-    echo ""
-    echo "Configuration:"
-    echo "  Config location: ~/.config/chezwizper/config.toml"
+    echo "  whisper-cpp available as 'whisper-cli'"
+    echo "  Use 'whisper-cli --help' for usage information"
     echo ""
     
-    # Set up pre-commit hooks if not already done
-    if [ ! -f .git/hooks/pre-commit ]; then
-      pre-commit install
-    fi
     
-    # Create config directory if it doesn't exist
-    mkdir -p ~/.config/chezwizper
     
     # Set Rust backtrace for better debugging
     export RUST_BACKTRACE=1
