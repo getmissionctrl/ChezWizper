@@ -22,7 +22,7 @@ let
     [whisper]
     model = "${cfg.whisper.model}"
     language = "${cfg.whisper.language}"
-    command_path = "${cfg.whisper-cpp}/bin/whisper-cpp"
+    command_path = "${cfg.whisper-cpp}/bin/whisper-cli"
     model_path = "${modelPath}"
 
     [ui]
@@ -206,6 +206,7 @@ in
     # Install the package
     home.packages = [ chezwizperPackage ];
 
+
     # Setup systemd user service
     systemd.user.services.chezwizper = {
       Unit = {
@@ -223,10 +224,7 @@ in
           "RUST_LOG=${cfg.logLevel}"
         ];
 
-        # Security settings
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = "read-only";
+        # Minimal security settings to allow desktop session access
         ReadWritePaths = [
           "%h/.config/chezwizper"
           "%h/.local/share/chezwizper"

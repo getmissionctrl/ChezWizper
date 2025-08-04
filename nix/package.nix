@@ -12,6 +12,7 @@
 , wtype
 , wl-clipboard
 , curl
+, hyprland
 }:
 
 rustPlatform.buildRustPackage rec {
@@ -23,9 +24,11 @@ rustPlatform.buildRustPackage rec {
     filter = path: type:
       let
         baseName = baseNameOf path;
+        relativePath = lib.removePrefix (toString ../. + "/") (toString path);
       in
       !(lib.hasSuffix "flake.nix" path ||
         lib.hasSuffix "flake.lock" path ||
+        lib.hasPrefix "nix/" relativePath ||
         baseName == "nix" ||
         baseName == ".direnv" ||
         baseName == "result" ||
@@ -54,6 +57,7 @@ rustPlatform.buildRustPackage rec {
     wtype
     wl-clipboard
     curl
+    hyprland
     alsa-utils  # Provides aplay, speaker-test, etc.
   ];
 
@@ -61,9 +65,6 @@ rustPlatform.buildRustPackage rec {
     # Wrap the binary to include all runtime dependencies in PATH
     wrapProgram $out/bin/chezwizper \
       --prefix PATH : ${lib.makeBinPath runtimeDeps}
-    
-    # Create a symlink for whisper compatibility (ChezWizper looks for 'whisper' command)
-    ln -sf ${whisper-cpp}/bin/whisper-cli $out/bin/whisper
   '';
 
   meta = with lib; {
