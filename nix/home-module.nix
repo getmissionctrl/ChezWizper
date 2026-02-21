@@ -4,15 +4,7 @@ with lib;
 
 let
   cfg = config.services.chezwizper;
-  
-  # Determine the model file path
-  modelFileName = "ggml-${cfg.whisper.model}.bin";
-  modelPath = 
-    if cfg.whisper.modelPath != null then 
-      cfg.whisper.modelPath
-    else 
-      "${config.xdg.dataHome}/chezwizper/models/${modelFileName}";
-  
+
   configFile = pkgs.writeText "chezwizper-config.toml" ''
     [audio]
     device = "${cfg.audio.device}"
@@ -20,10 +12,8 @@ let
     channels = ${toString cfg.audio.channels}
 
     [whisper]
-    model = "${cfg.whisper.model}"
+    model = "base-en"
     language = "${cfg.whisper.language}"
-    command_path = "${cfg.whisper-cpp}/bin/whisper-cli"
-    model_path = "${modelPath}"
 
     [ui]
     indicator_position = "${cfg.ui.indicatorPosition}"
@@ -46,7 +36,7 @@ let
   '';
 
   chezwizperPackage = cfg.package.override {
-    inherit (cfg) whisper-cpp;
+    inherit (cfg) moonshine-cli moonshine;
   };
 in
 {
@@ -60,11 +50,14 @@ in
       description = "The ChezWizper package to use";
     };
 
-    whisper-cpp = mkOption {
+    moonshine-cli = mkOption {
       type = types.package;
-      default = pkgs.whisper-cpp;
-      defaultText = literalExpression "pkgs.whisper-cpp";
-      description = "The whisper-cpp package to use";
+      description = "The moonshine-cli package to use";
+    };
+
+    moonshine = mkOption {
+      type = types.package;
+      description = "The moonshine package (provides bundled models)";
     };
 
     audio = {
@@ -88,23 +81,10 @@ in
     };
 
     whisper = {
-      model = mkOption {
-        type = types.str;
-        default = "base";
-        description = "Whisper model to use (e.g., tiny, base, small, medium, large)";
-      };
-
       language = mkOption {
         type = types.str;
         default = "en";
         description = "Language code for transcription";
-      };
-
-      modelPath = mkOption {
-        type = types.nullOr types.path;
-        default = null;
-        description = "Path to whisper model file (auto-downloads if null)";
-        example = "~/.local/share/chezwizper/models/ggml-base.bin";
       };
     };
 
@@ -206,7 +186,6 @@ in
     # Install the package
     home.packages = [ chezwizperPackage ];
 
-
     # Setup systemd user service
     systemd.user.services.chezwizper = {
       Unit = {
@@ -232,7 +211,7 @@ in
         ];
 
         # Resource limits
-        MemoryLimit = "6G";
+        MemoryLimit = "2G";
         CPUQuota = "80%";
       };
 
@@ -241,7 +220,7 @@ in
       };
     };
 
-    # Create config directories and download model
+    # Create config directory and copy config
     systemd.user.services.chezwizper-setup = {
       Unit = {
         Description = "ChezWizper initial setup";
@@ -252,22 +231,8 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "chezwizper-setup" ''
-          # Create directories
           mkdir -p $HOME/.config/chezwizper
-          mkdir -p ${config.xdg.dataHome}/chezwizper/models
-          
-          # Copy configuration
           cp ${configFile} $HOME/.config/chezwizper/config.toml
-          
-          # Download model if needed
-          ${optionalString (cfg.whisper.modelPath == null) ''
-            MODEL_FILE="${config.xdg.dataHome}/chezwizper/models/${modelFileName}"
-            if [ ! -f "$MODEL_FILE" ]; then
-              echo "Downloading whisper model ${cfg.whisper.model}..."
-              cd ${config.xdg.dataHome}/chezwizper/models
-              ${cfg.whisper-cpp}/bin/whisper-cpp-download-ggml-model ${cfg.whisper.model}
-            fi
-          ''}
         '';
       };
 
