@@ -66,7 +66,6 @@ async fn main() -> Result<()> {
 
     // Build whisper transcriber
     let whisper = WhisperTranscriber::new(config.whisper.command_path.clone())?
-        .with_model(config.whisper.model.clone())
         .with_model_path(config.whisper.model_path.clone())
         .with_language(config.whisper.language.clone());
 

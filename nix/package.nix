@@ -4,8 +4,8 @@
 , alsa-lib
 , alsa-utils
 , libxkbcommon
-, whisper-cpp
-, openai-whisper
+, moonshine-cli
+, moonshine
 , makeWrapper
 # Runtime dependencies
 , ydotool
@@ -51,8 +51,7 @@ rustPlatform.buildRustPackage rec {
 
   # Runtime dependencies that need to be available in PATH
   runtimeDeps = [
-    whisper-cpp
-    openai-whisper
+    moonshine-cli
     ydotool
     wtype
     wl-clipboard
@@ -64,7 +63,8 @@ rustPlatform.buildRustPackage rec {
   postInstall = ''
     # Wrap the binary to include all runtime dependencies in PATH
     wrapProgram $out/bin/chezwizper \
-      --prefix PATH : ${lib.makeBinPath runtimeDeps}
+      --prefix PATH : ${lib.makeBinPath runtimeDeps} \
+      --set MOONSHINE_MODEL_DIR ${moonshine}/share/moonshine/models/base-en
   '';
 
   meta = with lib; {

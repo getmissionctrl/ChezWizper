@@ -1,8 +1,8 @@
 use anyhow::Result;
 use regex::Regex;
-use tracing::{debug, info};
+use tracing::debug;
 
-/// Trait for normalizing transcription output from various whisper implementations
+/// Trait for normalizing transcription output
 pub trait TranscriptionNormalizer: Send + Sync {
     /// Normalize the raw transcription output
     fn normalize(&self, raw_output: &str) -> String;
@@ -11,7 +11,7 @@ pub trait TranscriptionNormalizer: Send + Sync {
     fn name(&self) -> &'static str;
 }
 
-/// Normalizer for whisper.cpp output format
+/// Normalizer for whisper.cpp-compatible output format (used by moonshine-cli)
 pub struct WhisperCppNormalizer {
     timestamp_regex: Regex,
 }
@@ -28,7 +28,7 @@ impl WhisperCppNormalizer {
 
 impl TranscriptionNormalizer for WhisperCppNormalizer {
     fn normalize(&self, raw_output: &str) -> String {
-        debug!("Normalizing whisper.cpp output");
+        debug!("Normalizing transcription output");
 
         let mut cleaned = String::new();
 
@@ -61,57 +61,20 @@ impl TranscriptionNormalizer for WhisperCppNormalizer {
     }
 }
 
-/// Normalizer for OpenAI Whisper output format
-pub struct OpenAIWhisperNormalizer;
-
-impl OpenAIWhisperNormalizer {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl TranscriptionNormalizer for OpenAIWhisperNormalizer {
-    fn normalize(&self, raw_output: &str) -> String {
-        // OpenAI Whisper typically outputs clean text without timestamps
-        // Just trim whitespace
-        raw_output.trim().to_string()
-    }
-
-    fn name(&self) -> &'static str {
-        "OpenAIWhisperNormalizer"
-    }
-}
-
-/// Enum to hold different normalizer types
-pub enum Normalizer {
-    WhisperCpp(WhisperCppNormalizer),
-    OpenAIWhisper(OpenAIWhisperNormalizer),
+pub struct Normalizer {
+    inner: WhisperCppNormalizer,
 }
 
 impl Normalizer {
-    /// Create a normalizer based on whether this is OpenAI whisper or whisper.cpp
-    pub fn create(is_openai_whisper: bool) -> Result<Self> {
-        if is_openai_whisper {
-            info!("Creating OpenAI Whisper normalizer");
-            Ok(Normalizer::OpenAIWhisper(OpenAIWhisperNormalizer::new()))
-        } else {
-            info!("Creating whisper.cpp normalizer");
-            Ok(Normalizer::WhisperCpp(WhisperCppNormalizer::new()?))
-        }
+    pub fn create() -> Result<Self> {
+        Ok(Self {
+            inner: WhisperCppNormalizer::new()?,
+        })
     }
 
-    /// Run normalization using the appropriate normalizer
     pub fn run(&self, raw_output: &str) -> String {
-        match self {
-            Normalizer::WhisperCpp(n) => {
-                debug!("Running {}", n.name());
-                n.normalize(raw_output)
-            }
-            Normalizer::OpenAIWhisper(n) => {
-                debug!("Running {}", n.name());
-                n.normalize(raw_output)
-            }
-        }
+        debug!("Running {}", self.inner.name());
+        self.inner.normalize(raw_output)
     }
 }
 
@@ -135,16 +98,6 @@ mod tests {
 
         let input = "[00:00:00:000 --> 00:00:03:280] This is me talking";
         let expected = "This is me talking";
-
-        assert_eq!(normalizer.normalize(input), expected);
-    }
-
-    #[test]
-    fn test_openai_whisper_normalizer() {
-        let normalizer = OpenAIWhisperNormalizer::new();
-
-        let input = "  This is clean text  ";
-        let expected = "This is clean text";
 
         assert_eq!(normalizer.normalize(input), expected);
     }

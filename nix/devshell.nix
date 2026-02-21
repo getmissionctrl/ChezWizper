@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, moonshine-cli, ... }:
 
 pkgs.mkShell {
   name = "chezwizper-dev";
@@ -17,8 +17,7 @@ pkgs.mkShell {
     libxkbcommon
 
     # Runtime dependencies
-    whisper-cpp
-    openai-whisper
+    moonshine-cli
     wtype
     ydotool
     wl-clipboard
@@ -58,17 +57,17 @@ pkgs.mkShell {
     echo "  make fmt             - Check formatting"
     echo "  make fix             - Fix formatting and simple issues"
     echo ""
-    echo "Whisper:"
-    echo "  whisper-cpp available as 'whisper-cli'"
-    echo "  Use 'whisper-cli --help' for usage information"
+    echo "Moonshine:"
+    echo "  moonshine-cli available as 'moonshine-cli'"
+    echo "  Use 'moonshine-cli --help' for usage information"
     echo ""
-    
-    
-    
+
+
+
     # Set Rust backtrace for better debugging
     export RUST_BACKTRACE=1
     export RUST_LOG=chezwizper=debug
-    
+
     # Ensure we're using the right Rust source path
     export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}"
   '';

@@ -74,7 +74,7 @@ impl Default for AudioConfig {
 impl Default for WhisperConfig {
     fn default() -> Self {
         Self {
-            model: "base".to_string(),
+            model: "base-en".to_string(),
             language: "en".to_string(),
             command_path: None,
             model_path: None,

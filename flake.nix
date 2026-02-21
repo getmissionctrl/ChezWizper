@@ -4,32 +4,28 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    moonshine.url = "path:../moonshine";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, moonshine }:
     let
       # System-specific outputs
       systemOutputs = flake-utils.lib.eachDefaultSystem (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          
-          # Import our package definition with standard whisper-cpp
-          chezwizper = pkgs.callPackage ./nix/package.nix { };
-          
-          # Whisper models packages (optional)
-          whisper-models-base = pkgs.callPackage ./nix/whisper-models.nix { 
-            models = [ "base" ];
+
+          moonshine-cli = moonshine.packages.${system}.moonshine-cli;
+          moonshine-pkg = moonshine.packages.${system}.moonshine;
+
+          # Import our package definition
+          chezwizper = pkgs.callPackage ./nix/package.nix {
+            inherit moonshine-cli;
+            moonshine = moonshine-pkg;
           };
-          whisper-models-small = pkgs.callPackage ./nix/whisper-models.nix { 
-            models = [ "base" "small" ];
-          };
-          whisper-models-large = pkgs.callPackage ./nix/whisper-models.nix { 
-            models = [ "base" "small" "large-v3" ];
-          };
-          
+
           # Import our devshell
-          devShell = import ./nix/devshell.nix { 
-            inherit pkgs;
+          devShell = import ./nix/devshell.nix {
+            inherit pkgs moonshine-cli;
           };
         in
         {
@@ -37,11 +33,6 @@
           packages = {
             default = chezwizper;
             chezwizper = chezwizper;
-            
-            # Whisper models packages
-            whisper-models-base = whisper-models-base;
-            whisper-models-small = whisper-models-small;
-            whisper-models-large = whisper-models-large;
           };
 
           # Development shell
