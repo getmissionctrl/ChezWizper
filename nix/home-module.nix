@@ -45,8 +45,10 @@ in
 
     package = mkOption {
       type = types.package;
-      default = pkgs.callPackage ./package.nix { };
-      defaultText = literalExpression "pkgs.chezwizper";
+      default = pkgs.callPackage ./package.nix {
+        inherit (cfg) moonshine-cli moonshine;
+      };
+      defaultText = literalExpression "pkgs.callPackage ./package.nix { inherit moonshine-cli moonshine; }";
       description = "The ChezWizper package to use";
     };
 
