@@ -66,6 +66,8 @@ impl WhisperTranscriber {
             .arg(audio_path)
             .arg("-m")
             .arg(&model_arg)
+            .arg("-a")
+            .arg("1") // base architecture (model is base-en)
             .arg("-l")
             .arg(&self.language)
             .arg("-nt") // No timestamps
