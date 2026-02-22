@@ -233,8 +233,8 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "chezwizper-setup" ''
-          mkdir -p $HOME/.config/chezwizper
-          cp ${configFile} $HOME/.config/chezwizper/config.toml
+          ${pkgs.coreutils}/bin/mkdir -p $HOME/.config/chezwizper
+          ${pkgs.coreutils}/bin/cp ${configFile} $HOME/.config/chezwizper/config.toml
         '';
       };
 
