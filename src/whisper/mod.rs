@@ -61,13 +61,16 @@ impl WhisperTranscriber {
             ));
         };
 
+        // Detect model architecture from directory name
+        let arch = if model_arg.contains("tiny") { "0" } else { "1" };
+
         let mut cmd = Command::new(&self.command_path);
         cmd.arg("-f")
             .arg(audio_path)
             .arg("-m")
             .arg(&model_arg)
             .arg("-a")
-            .arg("1") // base architecture (model is base-en)
+            .arg(arch)
             .arg("-l")
             .arg(&self.language)
             .arg("-nt") // No timestamps
