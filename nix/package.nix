@@ -6,6 +6,7 @@
 , libxkbcommon
 , moonshine-cli
 , moonshine
+, modelVariant ? "base-en"
 , makeWrapper
 # Runtime dependencies
 , ydotool
@@ -64,7 +65,7 @@ rustPlatform.buildRustPackage rec {
     # Wrap the binary to include all runtime dependencies in PATH
     wrapProgram $out/bin/chezwizper \
       --prefix PATH : ${lib.makeBinPath runtimeDeps} \
-      --set MOONSHINE_MODEL_DIR ${moonshine}/share/moonshine/models/base-en
+      --set MOONSHINE_MODEL_DIR ${moonshine}/share/moonshine/models/${modelVariant}
   '';
 
   meta = with lib; {

@@ -36,7 +36,7 @@ let
   '';
 
   chezwizperPackage = cfg.package.override {
-    inherit (cfg) moonshine-cli moonshine;
+    inherit (cfg) moonshine-cli moonshine modelVariant;
   };
 in
 {
@@ -60,6 +60,12 @@ in
     moonshine = mkOption {
       type = types.package;
       description = "The moonshine package (provides bundled models)";
+    };
+
+    modelVariant = mkOption {
+      type = types.str;
+      default = "base-en";
+      description = "Moonshine model variant to use (e.g. 'tiny-en', 'base-en')";
     };
 
     audio = {
