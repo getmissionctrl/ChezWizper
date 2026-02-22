@@ -133,17 +133,18 @@ impl AudioStreamManager {
 
         info!("Stopping recording, {} samples captured", samples.len());
 
-        // Write WAV file
+        // Write WAV file as 16-bit PCM (required by moonshine-cli)
         let spec = WavSpec {
             channels: 1,
             sample_rate: 16000,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
         };
 
         let mut writer = WavWriter::create(&output_path, spec)?;
         for sample in samples {
-            writer.write_sample(sample)?;
+            let pcm = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+            writer.write_sample(pcm)?;
         }
         writer.finalize()?;
 
